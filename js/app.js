@@ -1,7 +1,7 @@
 //////////////////////////////////////////////
 // Data controller
 const DataController = (function() {
-	class Model {
+	class Data {
 		constructor(id, image, name, price) {
 			this.id = id;
 			this.image = image;
@@ -12,7 +12,7 @@ const DataController = (function() {
 
 	const data = {
 		items: [],
-		final_price: 0
+		total_price: 0
 	};
 
 	return {
@@ -26,10 +26,26 @@ const DataController = (function() {
 				id = 0;
 			}
 
-			newItem = new Model(id, image, name, price);
+			newItem = new Data(id, image, name, price);
 			data.items.push(newItem);
 
 			return newItem;
+		},
+
+		calculateTotalPrice: () => {
+			let sum = 0;
+			data.items.forEach(cur => {
+				sum += parseFloat(cur.price);
+			});
+
+			data.total_price = sum;
+		},
+
+		getData: () => {
+			return {
+				items: data.items,
+				totalPrice: data.total_price
+			};
 		},
 
 		testing: () => {
@@ -105,6 +121,12 @@ const UIController = (function() {
 			document.querySelector(element).insertAdjacentHTML("beforebegin", html);
 		},
 
+		UpdateUiTotals: obj => {
+			document.getElementById("cart-total").textContent = obj.totalPrice;
+			document.querySelector(".item-total").textContent = obj.totalPrice;
+			document.getElementById("item-count").textContent = obj.items.length;
+		},
+
 		getDomStrings: () => {
 			return domStrings;
 		}
@@ -128,13 +150,22 @@ const AppController = (function(dataCtrl, uiCtrl) {
 		});
 	};
 
-	const updateTotals = () => {};
+	const updateTotals = () => {
+		// Calculate data totals
+		dataCtrl.calculateTotalPrice();
+
+		// get data from our ui
+		const data = dataCtrl.getData();
+
+		// update ui
+		uiCtrl.UpdateUiTotals(data);
+	};
 
 	const addItem = event => {
 		// Get data(image, price, name)
 		const data = uiCtrl.getData(event);
 
-		// Add item to model
+		// Add item to data
 		const item = dataCtrl.addStoreItem(data.image, data.name, data.price);
 
 		// Add item to ui
@@ -142,6 +173,7 @@ const AppController = (function(dataCtrl, uiCtrl) {
 		alert("Item has been added to cart");
 
 		// Update totals
+		updateTotals();
 	};
 
 	return {
