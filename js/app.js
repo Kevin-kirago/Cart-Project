@@ -16,6 +16,15 @@ const DataController = (function() {
 	};
 
 	return {
+		calculateTotalPrice: () => {
+			let sum = 0;
+			data.items.forEach(cur => {
+				sum += parseFloat(cur.price);
+			});
+
+			data.total_price = sum;
+		},
+
 		addStoreItem: (image, name, price) => {
 			let newItem, id;
 
@@ -32,13 +41,25 @@ const DataController = (function() {
 			return newItem;
 		},
 
-		calculateTotalPrice: () => {
-			let sum = 0;
-			data.items.forEach(cur => {
-				sum += parseFloat(cur.price);
+		removeStoreItem: id => {
+			let ids, index;
+
+			// get the ids
+			ids = data.items.map(el => {
+				return el.id;
 			});
 
-			data.total_price = sum;
+			// Get the index
+			index = ids.indexOf(id);
+
+			if (index !== -1) {
+				// remove item
+				data.items.splice(index, 1);
+			}
+		},
+
+		clearStoreItems: () => {
+			data.items.splice(0, data.items.length);
 		},
 
 		getData: () => {
@@ -61,8 +82,11 @@ const UIController = (function() {
 		cartContainer: "cart",
 		cartBtn: "cart-info",
 		showCart: "show-cart",
+		cartItem: ".cart-item",
 		storeItemIcon: ".store-item-icon",
-		totalsContainer: ".cart-total-container"
+		totalsContainer: ".cart-total-container",
+		itemRemoveBtn: ".cart-item-remove",
+		clearCartBtn: "clear-cart"
 	};
 
 	return {
@@ -105,20 +129,35 @@ const UIController = (function() {
 			element = domStrings.totalsContainer;
 
 			html = `
-			<div class="cart-item d-flex justify-content-between align-items-center text-capitalize my-3">
+			<div class="cart-item d-flex justify-content-between align-items-center text-capitalize my-3" id="cart_item-${obj.id}">
 				<img src="${obj.image}" class="img-fluid rounded-circle" id="item-img" alt="">
 				<div class="item-text">
 					<p id="cart-item-title" class="font-weight-bold mb-0">${obj.name}</p>
 					<span>$</span>
 					<span id="cart-item-price" class="cart-item-price" class="mb-0">${obj.price}</span>
 				</div>
-				<a href="#" id='cart-item-remove' class="cart-item-remove">
+				<span class="cart-item-remove">
 					<i class="fas fa-trash"></i>
-				</a>
+				</span>
 			</div>
 			`;
 
 			document.querySelector(element).insertAdjacentHTML("beforebegin", html);
+		},
+
+		removeItemFromUi: selectorId => {
+			let el = document.getElementById(selectorId);
+			el.parentNode.removeChild(el);
+		},
+
+		clearItemsFromUi: () => {
+			let itemNode = document.querySelectorAll(domStrings.cartItem);
+			itemNode.forEach(el => {
+				el.remove();
+			});
+			// convert nodelist to an array
+			// let items = Array.prototype.slice.call(itemNode);
+			// items.splice(0, items.length);
 		},
 
 		UpdateUiTotals: obj => {
@@ -148,6 +187,12 @@ const AppController = (function(dataCtrl, uiCtrl) {
 		storeIcon.forEach(el => {
 			el.addEventListener("click", addItem);
 		});
+
+		// Remove item
+		document.getElementById(dom.cartContainer).addEventListener("click", removeItem);
+
+		// Clear items
+		document.getElementById(dom.clearCartBtn).addEventListener("click", clearItems);
 	};
 
 	const updateTotals = () => {
@@ -159,6 +204,7 @@ const AppController = (function(dataCtrl, uiCtrl) {
 
 		// update ui
 		uiCtrl.UpdateUiTotals(data);
+		console.log(dataCtrl.getData());
 	};
 
 	const addItem = event => {
@@ -173,6 +219,35 @@ const AppController = (function(dataCtrl, uiCtrl) {
 		alert("Item has been added to cart");
 
 		// Update totals
+		updateTotals();
+	};
+
+	const removeItem = event => {
+		let id, itemID;
+
+		if (event.target.parentElement.parentElement.parentElement.classList.contains(dom.cartContainer)) {
+			id = event.target.parentElement.parentElement.id;
+			itemID = parseInt(id.split("-")[1]);
+
+			// remove item from our data
+			dataCtrl.removeStoreItem(itemID);
+
+			// remove item from our ui
+			uiCtrl.removeItemFromUi(id);
+
+			// update ui
+			updateTotals();
+		}
+	};
+
+	const clearItems = () => {
+		// clear items from our data model
+		dataCtrl.clearStoreItems();
+
+		// clear items from our ui
+		uiCtrl.clearItemsFromUi();
+
+		// update ui
 		updateTotals();
 	};
 
