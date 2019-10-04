@@ -214,11 +214,11 @@ const UIController = (function() {
 		},
 
 		populateCartItems: obj => {
-			let element, html;
+			if (obj.items.length === 0) {
+				let element, html;
 
-			element = domStrings.totalsContainer;
+				element = domStrings.totalsContainer;
 
-			if (obj.items.length !== 0) {
 				obj.items.forEach(el => {
 					html += `
 					<div class="cart-item d-flex justify-content-between align-items-center text-capitalize my-3" id="cart_item-${el.id}">
@@ -235,9 +235,6 @@ const UIController = (function() {
 					`;
 				});
 
-				document.querySelector(element).insertAdjacentHTML("beforebegin", html);
-			} else {
-				html += ``;
 				document.querySelector(element).insertAdjacentHTML("beforebegin", html);
 			}
 		},
@@ -356,8 +353,11 @@ const AppController = (function(dataCtrl, uiCtrl, strgCtrl) {
 
 			const data = dataCtrl.getData();
 
-			uiCtrl.populateCartItems(data);
-			updateTotals();
+			// Populating the cart
+			if (localStorage.length !== 0) {
+				uiCtrl.populateCartItems(data);
+				updateTotals();
+			}
 
 			setUpEventListeners();
 		}
