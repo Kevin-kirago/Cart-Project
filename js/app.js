@@ -1,3 +1,83 @@
+// ///////////////////////////////////////////////////////////////
+// Storage Controller
+// ///////////////////////////////////////////////////////////////
+
+const StorageController = (function() {
+	return {
+		getItemsFromStorage: function() {
+			let data;
+			if (localStorage.getItem("Data") === null) {
+				data = {
+					items: [],
+					total_price: 0
+				};
+			} else {
+				data = JSON.parse(localStorage.getItem("Data"));
+			}
+			return data;
+		},
+
+		// Add item to local storage
+		addItemToStorage: function(obj) {
+			let data;
+			let sum = 0;
+
+			if (localStorage.getItem("Data") === null) {
+				data = {
+					items: [],
+					total_price: 0
+				};
+				// Push new item
+				data.items.push(obj);
+				data.items.forEach(el => {
+					sum += parseFloat(el.price);
+				});
+
+				data.total_price = sum;
+
+				// Set ls
+				localStorage.setItem("Data", JSON.stringify(data));
+			} else {
+				// Get what is already in ls
+				data = JSON.parse(localStorage.getItem("Data"));
+
+				// Push new item
+				data.items.push(obj);
+				data.items.forEach(el => {
+					sum += parseFloat(el.price);
+				});
+
+				data.total_price = sum;
+
+				// Re set ls
+				localStorage.setItem("Data", JSON.stringify(data));
+			}
+		},
+
+		removeItemFromStorage: id => {
+			// get items from local storage
+			let data = JSON.parse(localStorage.getItem("Data"));
+			let sum = 0;
+
+			// Loop over the array
+			data.items.forEach((cur, index) => {
+				if (id === cur.id) {
+					data.items.splice(index, 1);
+				}
+			});
+
+			data.items.forEach(el => {
+				sum += parseFloat(el.price);
+			});
+
+			data.total_price = sum;
+
+			// update local storage
+			localStorage.setItem("Data", JSON.stringify(data));
+		}
+	};
+})();
+
 //////////////////////////////////////////////
 // Data controller
 const DataController = (function() {
@@ -10,21 +90,9 @@ const DataController = (function() {
 		}
 	}
 
-	const data = {
-		items: [],
-		total_price: 0
-	};
+	const data = StorageController.getItemsFromStorage();
 
 	return {
-		calculateTotalPrice: () => {
-			let sum = 0;
-			data.items.forEach(cur => {
-				sum += parseFloat(cur.price);
-			});
-
-			data.total_price = sum;
-		},
-
 		addStoreItem: (image, name, price) => {
 			let newItem, id;
 
@@ -145,6 +213,35 @@ const UIController = (function() {
 			document.querySelector(element).insertAdjacentHTML("beforebegin", html);
 		},
 
+		populateCartItems: obj => {
+			let element, html;
+
+			element = domStrings.totalsContainer;
+
+			if (obj.items.length !== 0) {
+				obj.items.forEach(el => {
+					html += `
+					<div class="cart-item d-flex justify-content-between align-items-center text-capitalize my-3" id="cart_item-${el.id}">
+						<img src="${el.image}" class="img-fluid rounded-circle" id="item-img" alt="">
+						<div class="item-text">
+							<p id="cart-item-title" class="font-weight-bold mb-0">${el.name}</p>
+							<span>$</span>
+							<span id="cart-item-price" class="cart-item-price" class="mb-0">${el.price}</span>
+						</div>
+						<span class="cart-item-remove">
+							<i class="fas fa-trash"></i>
+						</span>
+					</div>
+					`;
+				});
+
+				document.querySelector(element).insertAdjacentHTML("beforebegin", html);
+			} else {
+				html += ``;
+				document.querySelector(element).insertAdjacentHTML("beforebegin", html);
+			}
+		},
+
 		removeItemFromUi: selectorId => {
 			let el = document.getElementById(selectorId);
 			el.parentNode.removeChild(el);
@@ -155,14 +252,11 @@ const UIController = (function() {
 			itemNode.forEach(el => {
 				el.remove();
 			});
-			// convert nodelist to an array
-			// let items = Array.prototype.slice.call(itemNode);
-			// items.splice(0, items.length);
 		},
 
 		UpdateUiTotals: obj => {
-			document.getElementById("cart-total").textContent = obj.totalPrice;
-			document.querySelector(".item-total").textContent = obj.totalPrice;
+			document.getElementById("cart-total").textContent = obj.total_price;
+			document.querySelector(".item-total").textContent = obj.total_price;
 			document.getElementById("item-count").textContent = obj.items.length;
 		},
 
@@ -174,7 +268,7 @@ const UIController = (function() {
 
 //////////////////////////////////////////////
 // App controller
-const AppController = (function(dataCtrl, uiCtrl) {
+const AppController = (function(dataCtrl, uiCtrl, strgCtrl) {
 	let dom = uiCtrl.getDomStrings();
 
 	// Setup the eventlisteners
@@ -196,23 +290,23 @@ const AppController = (function(dataCtrl, uiCtrl) {
 	};
 
 	const updateTotals = () => {
-		// Calculate data totals
-		dataCtrl.calculateTotalPrice();
-
 		// get data from our ui
-		const data = dataCtrl.getData();
+		const data = strgCtrl.getItemsFromStorage();
 
 		// update ui
 		uiCtrl.UpdateUiTotals(data);
-		console.log(dataCtrl.getData());
 	};
 
+	// add item
 	const addItem = event => {
 		// Get data(image, price, name)
 		const data = uiCtrl.getData(event);
 
 		// Add item to data
 		const item = dataCtrl.addStoreItem(data.image, data.name, data.price);
+
+		// strgCtrl.addItemToStorage(item);
+		strgCtrl.addItemToStorage(item);
 
 		// Add item to ui
 		uiCtrl.addItemToUi(item);
@@ -222,6 +316,7 @@ const AppController = (function(dataCtrl, uiCtrl) {
 		updateTotals();
 	};
 
+	// remove item
 	const removeItem = event => {
 		let id, itemID;
 
@@ -232,6 +327,9 @@ const AppController = (function(dataCtrl, uiCtrl) {
 			// remove item from our data
 			dataCtrl.removeStoreItem(itemID);
 
+			// remove item from ls
+			strgCtrl.removeItemFromStorage(itemID);
+
 			// remove item from our ui
 			uiCtrl.removeItemFromUi(id);
 
@@ -240,6 +338,7 @@ const AppController = (function(dataCtrl, uiCtrl) {
 		}
 	};
 
+	// Clear items
 	const clearItems = () => {
 		// clear items from our data model
 		dataCtrl.clearStoreItems();
@@ -255,9 +354,14 @@ const AppController = (function(dataCtrl, uiCtrl) {
 		init() {
 			console.log("Application has started ...");
 
+			const data = dataCtrl.getData();
+
+			uiCtrl.populateCartItems(data);
+			updateTotals();
+
 			setUpEventListeners();
 		}
 	};
-})(DataController, UIController);
+})(DataController, UIController, StorageController);
 
 AppController.init();
