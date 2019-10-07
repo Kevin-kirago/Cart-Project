@@ -74,6 +74,10 @@ const StorageController = (function() {
 
 			// update local storage
 			localStorage.setItem("Data", JSON.stringify(data));
+		},
+
+		clearItemsFromLocalStorage: () => {
+			localStorage.clear();
 		}
 	};
 })();
@@ -93,6 +97,16 @@ const DataController = (function() {
 	const data = StorageController.getItemsFromStorage();
 
 	return {
+		calculateTotals: () => {
+			let sum = 0;
+
+			data.items.forEach(el => {
+				sum += parseFloat(el.price);
+			});
+
+			data.total_price = sum;
+		},
+
 		addStoreItem: (image, name, price) => {
 			let newItem, id;
 
@@ -214,13 +228,13 @@ const UIController = (function() {
 		},
 
 		populateCartItems: obj => {
-			if (obj.items.length === 0) {
-				let element, html;
+			let element,
+				html = "";
 
-				element = domStrings.totalsContainer;
+			element = domStrings.totalsContainer;
 
-				obj.items.forEach(el => {
-					html += `
+			obj.items.forEach(el => {
+				html += `
 					<div class="cart-item d-flex justify-content-between align-items-center text-capitalize my-3" id="cart_item-${el.id}">
 						<img src="${el.image}" class="img-fluid rounded-circle" id="item-img" alt="">
 						<div class="item-text">
@@ -232,11 +246,10 @@ const UIController = (function() {
 							<i class="fas fa-trash"></i>
 						</span>
 					</div>
-					`;
-				});
+				`;
+			});
 
-				document.querySelector(element).insertAdjacentHTML("beforebegin", html);
-			}
+			document.querySelector(element).insertAdjacentHTML("beforebegin", html);
 		},
 
 		removeItemFromUi: selectorId => {
@@ -287,6 +300,8 @@ const AppController = (function(dataCtrl, uiCtrl, strgCtrl) {
 	};
 
 	const updateTotals = () => {
+		dataCtrl.calculateTotals();
+
 		// get data from our ui
 		const data = strgCtrl.getItemsFromStorage();
 
@@ -343,6 +358,8 @@ const AppController = (function(dataCtrl, uiCtrl, strgCtrl) {
 		// clear items from our ui
 		uiCtrl.clearItemsFromUi();
 
+		strgCtrl.clearItemsFromLocalStorage();
+
 		// update ui
 		updateTotals();
 	};
@@ -354,7 +371,7 @@ const AppController = (function(dataCtrl, uiCtrl, strgCtrl) {
 			const data = dataCtrl.getData();
 
 			// Populating the cart
-			if (localStorage.length !== 0) {
+			if (localStorage.length > 0) {
 				uiCtrl.populateCartItems(data);
 				updateTotals();
 			}
